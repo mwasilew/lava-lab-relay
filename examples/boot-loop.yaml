@@ -1,0 +1,19 @@
+metadata:
+  format: Lava-Test Test Definition 1.0
+  name: boot-loop
+  description: >-
+    Power-cycle the board through the relayed TAC REST API and classify each boot
+    from the relayed serial console (login / lost / timeout). Needs the relay test
+    service from this repository and a docker test action with
+    disconnect_connection: true.
+
+params:
+  TAC_SERIAL: ""
+  BOOTS: "60"
+  BOOT_TIMEOUT: "180"
+  SILENCE: "30"
+  MARKER: ""
+
+run:
+  steps:
+  - TAC_SERIAL="$TAC_SERIAL" BOOTS="$BOOTS" BOOT_TIMEOUT="$BOOT_TIMEOUT" SILENCE="$SILENCE" MARKER="$MARKER" python3 -u examples/boot_loop.py

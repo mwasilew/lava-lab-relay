@@ -1,0 +1,38 @@
+# TCP relay as a LAVA Test Services container.
+#
+# LAVA docker test actions run on the default Docker bridge, so they cannot reach the
+# lab services that live on the dispatcher's network (the board console `ser2net`,
+# the TAC REST service `tac-api`). This service joins that network and publishes a
+# relay port for each of them on the worker; the test container then connects to the
+# bridge gateway (e.g. 172.17.0.1) on the published ports.
+#
+# Keep this file at the repository root: LAVA writes the job/device `environment:` to
+# a .env at the repo root, and docker compose only reads .env from the compose file's
+# own directory for ${VAR} interpolation.
+#
+# Overridable via the job/device `environment`:
+#   SER2NET_NETWORK      external Docker network with ser2net and tac-api
+#                        (default lava-dispatcher_default)
+#   SER2NET_HOST/PORT    console endpoint (default ser2net:7085 - the port is per board)
+#   TAC_HOST/PORT        TAC REST endpoint (default tac-api:80)
+#   RELAY_CONSOLE_PORT   worker port published for the console (default 17085)
+#   RELAY_TAC_PORT       worker port published for the TAC API (default 17080)
+#   RELAY_IMAGE          any image with python3 (default ghcr.io/foundriesio/lava-lmp-sign:main,
+#                        which the lab workers can pull; Docker Hub may be unreachable)
+services:
+  relay:
+    image: ${RELAY_IMAGE:-ghcr.io/foundriesio/lava-lmp-sign:main}
+    command: ["python3", "-u", "/relay.py"]
+    volumes:
+      - ./relay.py:/relay.py:ro
+    environment:
+      - FORWARDS=7085=${SER2NET_HOST:-ser2net}:${SER2NET_PORT:-7085},7080=${TAC_HOST:-tac-api}:${TAC_PORT:-80}
+    ports:
+      - "${RELAY_CONSOLE_PORT:-17085}:7085"
+      - "${RELAY_TAC_PORT:-17080}:7080"
+    networks:
+      - lab
+networks:
+  lab:
+    name: ${SER2NET_NETWORK:-lava-dispatcher_default}
+    external: true
